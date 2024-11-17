@@ -1,0 +1,21 @@
+{
+  "name": "js-rust",
+  "version": "1.0.0",
+  "description": "Convert JS to Rust",
+  "main": "index.js",
+  "scripts": {
+    "watch": "tsc -w",
+    "build": "tsc",
+    "test": "node tests/index.js"
+  },
+  "keywords": [
+    "js",
+    "rust"
+  ],
+  "author": "schizobulia",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^22.8.7",
+    "typescript": "^5.6.3"
+  }
+}

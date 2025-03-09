@@ -1,1 +1,10 @@
 var a = "1";
+let b = "2";
+const c = "3";
+let d = 1;
+const e = 1.2;
+var f = 100000000;
+let g = false;
+const h = true;
+var i = false;
+i = true

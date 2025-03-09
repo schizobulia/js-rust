@@ -3,7 +3,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as types from './types'
 import * as codeGen from './codeGen'
-
+import * as tool from './tool'
 
 export function generate(rootDir: string, rootNames: string[]) : Map<string, string> {
     const program = createProgram(rootDir, rootNames)
@@ -11,6 +11,7 @@ export function generate(rootDir: string, rootNames: string[]) : Map<string, str
     const result = new Map<string, string>()
     program.getRootFileNames().forEach((ele: string) => {
         const node = getFileOutcome(program, ele, typeCheck)
+        fs.writeFileSync(path.join(__dirname, 'visualization', 'html', 'data.js'), `const rootNode = ${JSON.stringify(node, null, 4)}`)
         result.set(ele, codeGen.generateCode(node));
     })
     return result
@@ -42,6 +43,16 @@ function forEachNode(nodes: readonly ts.Node[], typeCheck: ts.TypeChecker): type
             case ts.SyntaxKind.VariableDeclarationList:
                 child.push(genVariableDeclarationList(node, typeCheck))
                 break
+            case ts.SyntaxKind.FunctionDeclaration:
+                child.push(genFunctionDeclaration(node as ts.FunctionDeclaration, typeCheck))
+                break
+            case ts.SyntaxKind.BinaryExpression:
+                child.push(genBinaryExpression(node as ts.BinaryExpression, typeCheck))
+                break;
+            case ts.SyntaxKind.ExpressionStatement:
+                const expressionStatement = node as ts.ExpressionStatement
+                child = child.concat(forEachNode([expressionStatement.expression], typeCheck))
+                break
             default:
                 break
         }
@@ -57,6 +68,12 @@ function genVariableDeclarationList(node: ts.Node, typeCheck: ts.TypeChecker): t
         kind: types.NodeKind.VariableDeclarationList
     }
     if (token?.kind === ts.SyntaxKind.VarKeyword) {
+        statementKeyWord = types.letKeyword([], 'let')
+    }
+    if (token?.kind === ts.SyntaxKind.ConstKeyword) {
+        statementKeyWord = types.constKeyword([], 'const')
+    }
+    if (token?.kind === ts.SyntaxKind.LetKeyword) {
         statementKeyWord = types.letKeyword([], 'let')
     }
     const variable = node as ts.VariableDeclarationList
@@ -80,12 +97,41 @@ function genVariableDeclarationList(node: ts.Node, typeCheck: ts.TypeChecker): t
     return variableDeclarationList as types.VariableDeclarationList
 }
 
+function genFunctionDeclaration(node: ts.FunctionDeclaration, typeCheck: ts.TypeChecker): types.FunctionDeclaration {
+    const name = types.identifier([], node.name?.getText() || '')
+    const parameters: types.Identifier[] = []
+    const body: types.Node[] = []
+    node.parameters.forEach((ele: ts.ParameterDeclaration) => {
+        parameters.push(types.identifier([], ele.name.getText()))
+    })
+    node.body?.statements.forEach((ele: ts.Statement) => {
+        forEachNode([ele], typeCheck).forEach((ele) => {
+            body.push(ele)
+        })
+    })
+    return types.functionDeclaration([], name, parameters, body)
+}
+
+function genBinaryExpression(node: ts.BinaryExpression, typeCheck: ts.TypeChecker) : types.BinaryExpression {
+    const left = node.left;
+    const right = node.right;
+    const rightNode = initializerValue(right)
+    const leftNode = types.identifier([], left.getText())
+    return types.binaryExpression(leftNode, rightNode)
+}
+
 function initializerValue(node: ts.Node): types.Node | undefined {
     const kine = node.kind;
     switch (kine) {
         case ts.SyntaxKind.StringLiteral:
             return types.stringLiteral(node.getText())
-
+        case ts.SyntaxKind.NumericLiteral:
+            const number = Number(node.getText())
+            return types.numericLiteral(number,  tool.getRustNumericType(number))
+        case ts.SyntaxKind.TrueKeyword:
+            return types.booleanLiteral(true)
+        case ts.SyntaxKind.FalseKeyword:
+            return types.booleanLiteral(false)
         default:
             break;
     }

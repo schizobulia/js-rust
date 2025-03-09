@@ -4,9 +4,9 @@
   "description": "Convert JS to Rust",
   "main": "index.js",
   "scripts": {
-    "watch": "tsc -w",
+    "watch": "node build/index.js && tsc -w",
     "build": "tsc",
-    "test": "node tests/index.js"
+    "test": "npm run build & node tests/index.js"
   },
   "keywords": [
     "js",
@@ -15,7 +15,12 @@
   "author": "schizobulia",
   "license": "ISC",
   "devDependencies": {
+    "@types/express": "^5.0.0",
     "@types/node": "^22.8.7",
+    "express": "^4.21.2",
     "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "fs-extra": "^11.3.0"
   }
 }
